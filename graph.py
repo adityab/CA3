@@ -5,16 +5,15 @@ import networkx as nx
 from utils import *
 
 class Graph(object):
-  def __init__(self, n, p, a_recip, a_conv, a_div, cc_chain):
+  def __init__(self, n, p, a_rec, a_conv, a_div, cc_chain):
     self.n = n
-    self.params = [p, a_recip, a_conv, a_div, cc_chain]
+    self.params = [p, a_rec, a_conv, a_div, cc_chain]
 
     # Format args upto 3 decimal places
     formatted = [format(param, '.3f') for param in self.params]
+
     # Run SONETS to generate graph
-    print(col(YELLOW, 'Generating SONET graph...'))
     subprocess.run(map(str, ['sonets/run_secorder', n] + formatted))
-    print(col(YELLOW, 'Graph generated.'))
 
     # Generated filename
     graph_name = '_'.join(['', str(n)] + formatted)

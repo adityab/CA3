@@ -12,15 +12,16 @@ simtime = 1200.0
 '''
 Network params
 '''
-net_params = {
-  'n': 100,  # Number of neurons
-  'p': 0.01   # ER-network connection probability
-}
+N = 1000         # Number of neurons
+p = 0.01        # ER-network connection probability
+a_rec = 0.0     # Motif stats
+a_conv = 0.0
+a_div = 0.0
+cc_chain = 0.0
 
 # Define synaptic model
 J = 0.1
 delay = 1.5
-
 
 nest.ResetKernel()
 
@@ -30,12 +31,16 @@ nest.ResetKernel()
 nest.CopyModel('static_synapse','excitatory', {'weight': J, 'delay': delay})
 
 # Create population
-population = nest.Create('iaf_psc_alpha', net_params['n'])
+population = nest.Create('iaf_psc_alpha', N)
 
 # Create graph
-W = Graph(net_params['n'], net_params['p'])
+print(col(BOLD, '* Generating SONET graph...'))
+W = Graph(N, p, a_rec, a_conv, a_div, cc_chain)
+print(col(BOLD, '* Done.'))
 
 # Connect population ids according to generated graph
+print(col(BOLD, '* Connecting neurons...'))
+
 for node, neighbors in enumerate(W.adjacency_list()):
   if len(neighbors):
     idx = population[0]
@@ -43,6 +48,8 @@ for node, neighbors in enumerate(W.adjacency_list()):
       [node + idx],
       [neighbor + idx for neighbor in neighbors],
       syn_spec='excitatory')
+
+print(col(BOLD, '* Done.'))
 
 ############## DEVICES ################
 
