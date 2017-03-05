@@ -90,3 +90,5 @@ ENV/
 
 # Generated stuff
 sonets/
+data/
+README.html
