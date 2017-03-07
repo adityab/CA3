@@ -14,6 +14,7 @@ T_eql = 10
 
 LOG_ACTIVITY=True
 PLOT_WEIGHTS=True
+WEIGHT_EVOL=False
 
 '''
 Network params
@@ -120,13 +121,14 @@ if LOG_ACTIVITY:
 
 connections = nest.GetConnections(population, synapse_model='stdp_synapse')
 
+hists = []
 # Run simulation
 for t in range(T):
   print(col(BOLD, '* Simulating second ' + str(t+1) ))
   nest.Simulate(1000.0)
+  current_weights = np.array(nest.GetStatus(connections, 'weight'))
 
   if PLOT_WEIGHTS:
-    current_weights = np.array(nest.GetStatus(connections, 'weight'))
     plt.figure()
     plt.hist(current_weights, bins=100, color='green', histtype="stepfilled")
     plt.title("t = " + str(t+1) + "s")
@@ -139,15 +141,17 @@ for t in range(T):
     print(col(YELLOW, '%d Neurons spiked %d times') % (len(set(dat['senders'])), len(dat['times']) ))
     nest.SetStatus(sd, [{"n_events": 0}])
 
-  #hist = np.histogram(current_weights, normed=True, bins=100)[0]
-  #hist = hist.tolist()
-  #hists.append(hist)
-  #print(np.mean(current_weights), ',', np.std(current_weights))
-  #print(current_weights[:10])
+  if WEIGHT_EVOL:
+    hist = np.histogram(current_weights, range=[0.5 * JE, 1.5 * JE], normed=True, bins=100)[0]
+    hist = hist - hist.min()
+    hist = hist / hist.max()
+    hist = hist.tolist()
+    hists.append(hist)
 
-#hists = np.transpose(np.array(hists))
-#plt.matshow(hists, cmap=plt.cm.gray_r)
-#plt.show()
+if WEIGHT_EVOL:
+  hists = np.transpose(np.array(hists))
+  plt.matshow(hists, cmap=plt.cm.gray_r)
+  plt.show()
 
 print(col(BOLD, '* Simulation finished.'))
 plt.show()
