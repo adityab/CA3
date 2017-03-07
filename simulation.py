@@ -20,9 +20,10 @@ p = 0.01          # ER-network connection probability
 a_rec = 5.0       # Motif stats p^2 * (1 + a_)
 a_conv = 5.0
 a_div = 5.0
-cc_chain = 0.0
+cc_chain = 1.0
 
-CE = 1000          # Number of poisson neurons projecting in ("cortical" inputs)
+CE = 1000         # Number of poisson neurons projecting in ("cortical" inputs)
+N_in = 100        # TODO: Experiments are somewhat sensitive to this number
 
 '''
 Synaptic params
@@ -65,10 +66,14 @@ nest.SetDefaults("stdp_synapse",{"tau_plus": tau_w,
                                  "Wmax":     2.0 * JE})
 
 # Create population
-population = nest.Create('iaf_psc_alpha', N, {"tau_minus": tau_w, "tau_m": tau_m, "V_th": V_th, "C_m": C_m, \
+population = nest.Create('iaf_psc_alpha', N, {
+  "tau_minus": tau_w,
+  "tau_m": tau_m,
+  "V_th": V_th,
+  "C_m": C_m,
   "V_reset": V_reset
   })
-print(nest.GetStatus([population[0]], ["V_reset", "V_th", "C_m", "tau_m", "t_ref", "tau_minus"]))
+#print(nest.GetStatus([population[0]], ["V_reset", "V_th", "C_m", "tau_m", "t_ref", "tau_minus"]))
 
 # Create graph
 print(col(BOLD, '* Generating SONET graph...'))
@@ -99,13 +104,11 @@ print(col(BOLD, '* Done.'))
 
 ############## DEVICES ################
 
-# One poisson generator with the full input population noise rate
+# One poisson generator with the full input population noise rate, for N_in input neurons
 noise = nest.Create('poisson_generator', 1, {'rate': p_rate})
-
+nest.Connect(noise, population[:N_in], syn_spec={'weight': 1.0})
+# Spike detector for the entire network
 sd = nest.Create("spike_detector")
-
-subset = population[:100]
-nest.Connect(noise, subset, syn_spec={'weight': 1.0})
 nest.Connect(population, sd)
 
 ########### SIMULATE ###############
