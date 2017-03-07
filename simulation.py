@@ -12,10 +12,13 @@ Simulation params
 T = 10
 T_eql = 10
 
+LOG_ACTIVITY=True
+PLOT_WEIGHTS=True
+
 '''
 Network params
 '''
-N = 3000          # Number of neurons
+N = 4000          # Number of neurons
 p = 0.01          # ER-network connection probability
 a_rec = 5.0       # Motif stats p^2 * (1 + a_)
 a_conv = 5.0
@@ -53,7 +56,7 @@ nu_ex = eta * nu_th               # Poisson excitator rate
 p_rate = 1000.0 * nu_ex * CE      # Population rate of the excitators
 
 nest.ResetKernel()
-#nest.SetKernelStatus({'print_time': True})
+nest.SetKernelStatus({'print_time': True})
 
 ############## NETWORK ################
 
@@ -107,30 +110,44 @@ print(col(BOLD, '* Done.'))
 # One poisson generator with the full input population noise rate, for N_in input neurons
 noise = nest.Create('poisson_generator', 1, {'rate': p_rate})
 nest.Connect(noise, population[:N_in], syn_spec={'weight': 1.0})
-# Spike detector for the entire network
-sd = nest.Create("spike_detector")
-nest.Connect(population, sd)
+
+if LOG_ACTIVITY:
+  # Spike detector for the entire network
+  sd = nest.Create("spike_detector")
+  nest.Connect(population, sd)
 
 ########### SIMULATE ###############
 
 connections = nest.GetConnections(population, synapse_model='stdp_synapse')
-hists = []
 
 # Run simulation
 for t in range(T):
   print(col(BOLD, '* Simulating second ' + str(t+1) ))
   nest.Simulate(1000.0)
 
-  current_weights = np.array(nest.GetStatus(connections, 'weight'))
+  if PLOT_WEIGHTS:
+    current_weights = np.array(nest.GetStatus(connections, 'weight'))
+    plt.figure()
+    plt.hist(current_weights, bins=100, color='green', histtype="stepfilled")
+    plt.title("t = " + str(t+1) + "s")
+    plt.xlabel("weight")
+    plt.ylabel("occurences")
+    plt.show(block=False)
+
+  if LOG_ACTIVITY:
+    dat = nest.GetStatus(sd, keys="events")[0]
+    print(col(YELLOW, '%d Neurons spiked %d times') % (len(set(dat['senders'])), len(dat['times']) ))
+    nest.SetStatus(sd, [{"n_events": 0}])
+
   #hist = np.histogram(current_weights, normed=True, bins=100)[0]
   #hist = hist.tolist()
   #hists.append(hist)
   #print(np.mean(current_weights), ',', np.std(current_weights))
   #print(current_weights[:10])
-  dat = nest.GetStatus(sd, keys="events")[0]
-  print(col(YELLOW, '%d Neurons spiked %d times') % (len(set(dat['senders'])), len(dat['times']) ))
-  nest.SetStatus(sd, [{"n_events": 0}])
 
 #hists = np.transpose(np.array(hists))
 #plt.matshow(hists, cmap=plt.cm.gray_r)
 #plt.show()
+
+print(col(BOLD, '* Simulation finished.'))
+plt.show()
