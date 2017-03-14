@@ -19,7 +19,7 @@ WEIGHT_EVOL=False
 '''
 Network params
 '''
-N = 4000          # Number of neurons
+N = 4000         # Number of neurons
 p = 0.01          # ER-network connection probability
 a_rec = 5.0       # Motif stats p^2 * (1 + a_)
 a_conv = 5.0
@@ -32,7 +32,7 @@ N_in = 100        # TODO: Experiments are somewhat sensitive to this number
 '''
 Synaptic params
 '''
-mu = 1.0
+mu = .4
 alpha = 1.085
 lamb = 0.02
 JE = .1          # Excitatory synaptic weights
@@ -58,6 +58,7 @@ p_rate = 1000.0 * nu_ex * CE      # Population rate of the excitators
 
 nest.ResetKernel()
 nest.SetKernelStatus({'print_time': True})
+nest.SetKernelStatus({"local_num_threads": 4})
 
 ############## NETWORK ################
 
@@ -89,7 +90,7 @@ print(col(BOLD, '* Done.'))
 # Connect population ids according to generated graph
 print(col(BOLD, '* Connecting neurons...'))
 
-for node, neighbors in enumerate(W.adjacency_list()):
+for node, neighbors in enumerate(W.adjacency_list):
   if len(neighbors):
     idx = population[0]
     nest.Connect(
@@ -124,17 +125,18 @@ connections = nest.GetConnections(population, synapse_model='stdp_synapse')
 hists = []
 # Run simulation
 for t in range(T):
-  print(col(BOLD, '* Simulating second ' + str(t+1) ))
+  print(col(BOLD, '* Simulating second ' + str((t+1)) ))
   nest.Simulate(1000.0)
   current_weights = np.array(nest.GetStatus(connections, 'weight'))
 
   if PLOT_WEIGHTS:
     plt.figure()
-    plt.hist(current_weights, bins=100, color='green', histtype="stepfilled")
+    plt.hist(current_weights, bins=1000, color='green', histtype="stepfilled")
     plt.title("t = " + str(t+1) + "s")
     plt.xlabel("weight")
     plt.ylabel("occurences")
     plt.show(block=False)
+    plt.savefig('weights_%d_%ds.png' % (N, t+1))
 
   if LOG_ACTIVITY:
     dat = nest.GetStatus(sd, keys="events")[0]
@@ -142,9 +144,9 @@ for t in range(T):
     nest.SetStatus(sd, [{"n_events": 0}])
 
   if WEIGHT_EVOL:
-    hist = np.histogram(current_weights, range=[0.5 * JE, 1.5 * JE], normed=True, bins=100)[0]
-    hist = hist - hist.min()
-    hist = hist / hist.max()
+    hist = np.histogram(current_weights, range=[0.0, 0.3], normed=True, bins=1000)[0]
+    #hist = hist - hist.min()
+    #hist = hist / hist.max()
     hist = hist.tolist()
     hists.append(hist)
 
@@ -152,6 +154,7 @@ if WEIGHT_EVOL:
   hists = np.transpose(np.array(hists))
   plt.matshow(hists, cmap=plt.cm.gray_r)
   plt.show()
+  plt.savefig('evol_%d.png' % N)
 
 print(col(BOLD, '* Simulation finished.'))
 plt.show()

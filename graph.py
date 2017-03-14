@@ -23,13 +23,17 @@ class Graph(object):
     self.params_requested = stats[1]
     self.params_detected = stats[0]
 
-    # Read adjacency matrix
-    self.matrix = np.loadtxt('data/w' + graph_name + '.dat', dtype=float)
+    # Read adjacency lists
+    #self.matrix = np.loadtxt('data/w' + graph_name + '.dat', dtype=float)
     # Turn it into a NetworkX object
-    self.G = nx.DiGraph(self.matrix)
+    #self.G = nx.DiGraph(self.matrix)
 
-  def adjacency_list(self):
-    return self.G.adjacency_list()
+    self.adjacency_list = []
+
+    with open('data/w' + graph_name + '.dat', 'r') as f:
+      for line in f:
+        row = np.fromstring(line, dtype=float, sep=' ')
+        self.adjacency_list.append(np.flatnonzero(row).tolist())
 
 #g = Graph(20, 0.1, 0, 0, 0, 0)
 # print(g.G.edges())
