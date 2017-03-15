@@ -9,8 +9,9 @@ from graph import *
 '''
 Simulation params
 '''
-T = 10
-T_eql = 10
+T = 20
+T_poisson = .2
+synapse_type='stdp_synapse'
 
 LOG_ACTIVITY=True
 PLOT_WEIGHTS=True
@@ -19,7 +20,7 @@ WEIGHT_EVOL=False
 '''
 Network params
 '''
-N = 4000         # Number of neurons
+N = 5000         # Number of neurons
 p = 0.01          # ER-network connection probability
 a_rec = 5.0       # Motif stats p^2 * (1 + a_)
 a_conv = 5.0
@@ -30,11 +31,11 @@ CE = 1000         # Number of poisson neurons projecting in ("cortical" inputs)
 N_in = 100        # TODO: Experiments are somewhat sensitive to this number
 
 '''
-Synaptic params
+Synaptic params, from Guetig et al 
 '''
-mu = .4
-alpha = 1.085
-lamb = 0.02
+mu = 0.4
+alpha = 1.05
+lamb = 0.005
 JE = .1          # Excitatory synaptic weights
 delay = 1.0
 
@@ -65,7 +66,7 @@ nest.SetKernelStatus({"local_num_threads": 4})
 # Define custom synapse model
 nest.SetDefaults("stdp_synapse",{"tau_plus": tau_w,
                                  "mu_plus":  mu,
-                                 "mu_minus": mu,
+                                 "mu_minus": 1.0,
                                  "alpha":    alpha,
                                  "lambda":   lamb,
                                  "Wmax":     2.0 * JE})
@@ -98,7 +99,7 @@ for node, neighbors in enumerate(W.adjacency_list):
       [neighbor + idx for neighbor in neighbors],
       syn_spec={
         'delay': 1.0,
-        'model': 'stdp_synapse',
+        'model': synapse_type,
         'weight': {
           'distribution': 'uniform',
           'low': 0.5 * JE,
@@ -110,7 +111,7 @@ print(col(BOLD, '* Done.'))
 ############## DEVICES ################
 
 # One poisson generator with the full input population noise rate, for N_in input neurons
-noise = nest.Create('poisson_generator', 1, {'rate': p_rate})
+noise = nest.Create('poisson_generator', 1, {'rate': p_rate, 'stop': T_poisson * 1000})
 nest.Connect(noise, population[:N_in], syn_spec={'weight': 1.0})
 
 if LOG_ACTIVITY:
@@ -125,8 +126,8 @@ connections = nest.GetConnections(population, synapse_model='stdp_synapse')
 hists = []
 # Run simulation
 for t in range(T):
-  print(col(BOLD, '* Simulating second ' + str((t+1)) ))
-  nest.Simulate(1000.0)
+  print(col(BOLD, '* Simulating second 0.1 * ' + str((t+1)) ))
+  nest.Simulate(100.0)
   current_weights = np.array(nest.GetStatus(connections, 'weight'))
 
   if PLOT_WEIGHTS:
@@ -153,7 +154,7 @@ for t in range(T):
 if WEIGHT_EVOL:
   hists = np.transpose(np.array(hists))
   plt.matshow(hists, cmap=plt.cm.gray_r)
-  plt.show()
+  plt.show(block=False)
   plt.savefig('evol_%d.png' % N)
 
 print(col(BOLD, '* Simulation finished.'))
