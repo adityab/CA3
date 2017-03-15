@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 import nest
 
@@ -9,13 +10,14 @@ from graph import *
 '''
 Simulation params
 '''
-T = 20
+T = 10
 T_poisson = .2
 synapse_type='stdp_synapse'
 
-LOG_ACTIVITY=True
-PLOT_WEIGHTS=True
-WEIGHT_EVOL=False
+LOG_ACTIVITY=True       # Print firing activity
+PLOT_ACTIVITY=False     # Plot PSTH and spiking activity of output subset
+PLOT_WEIGHTS=False      # Plot weight histograms 
+WEIGHT_EVOL=False       # Combined image of weight histogram progression
 
 '''
 Network params
@@ -110,14 +112,18 @@ print(col(BOLD, '* Done.'))
 
 ############## DEVICES ################
 
-# One poisson generator with the full input population noise rate, for N_in input neurons
-noise = nest.Create('poisson_generator', 1, {'rate': p_rate, 'stop': T_poisson * 1000})
-nest.Connect(noise, population[:N_in], syn_spec={'weight': 1.0})
+subset_in = population[:N_in]
+subset_out = population[-N_in:]
+subset_out = population         # To readout from entire network
 
-if LOG_ACTIVITY:
+# One poisson generator to prime the network with poisson input
+noise = nest.Create('poisson_generator', 1, {'rate': p_rate, 'stop': T_poisson * 1000})
+nest.Connect(noise, subset_in, syn_spec={'weight': 1.0})
+
+if LOG_ACTIVITY or PLOT_ACTIVITY:
   # Spike detector for the entire network
   sd = nest.Create("spike_detector")
-  nest.Connect(population, sd)
+  nest.Connect(subset_out, sd)
 
 ########### SIMULATE ###############
 
@@ -139,9 +145,31 @@ for t in range(T):
     plt.show(block=False)
     plt.savefig('weights_%d_%ds.png' % (N, t+1))
 
-  if LOG_ACTIVITY:
+  if LOG_ACTIVITY or PLOT_ACTIVITY:
     dat = nest.GetStatus(sd, keys="events")[0]
-    print(col(YELLOW, '%d Neurons spiked %d times') % (len(set(dat['senders'])), len(dat['times']) ))
+    s_sd = dat['senders']
+    t_sd = dat['times']
+    print(col(YELLOW, '%d Neurons spiked %d times') % (len(set(s_sd)), len(t_sd) ))
+
+    if PLOT_ACTIVITY:
+        plt.figure()
+        gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1]) 
+
+        plt.subplot(gs[0])
+
+        plt.plot(t_sd, s_sd, '|', ms=1.5, color='C0')
+        plt.xlabel('time (ms)')
+        plt.ylabel('neuron')
+        plt.title('spike activity')
+
+        plt.subplot(gs[1])
+        plt.hist(t_sd, bins=int(100), color='C1')
+        plt.xlabel("time (ms)")
+        plt.ylabel("spike counts")
+        plt.title('PSTH')
+        
+        plt.show(block=False)
+
     nest.SetStatus(sd, [{"n_events": 0}])
 
   if WEIGHT_EVOL:
